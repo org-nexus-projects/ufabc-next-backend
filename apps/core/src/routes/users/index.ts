@@ -207,6 +207,11 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
 
           const confirmedUser = await user.save();
 
+          request.log.info(
+            { ra: confirmedUser.ra, email: confirmedUser.email, _id: confirmedUser._id },
+            'User registration completed',
+          );
+
           const jwtToken = app.jwt.sign({
             _id: confirmedUser._id,
             ra: confirmedUser.ra,

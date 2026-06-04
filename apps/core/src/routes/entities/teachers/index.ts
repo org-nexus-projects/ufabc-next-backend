@@ -22,8 +22,10 @@ import {
 const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
   const teachersCache = app.cache<{}>();
 
-  app.get('/', { schema: listTeachersSchema }, async () => {
+  app.get('/', { schema: listTeachersSchema }, async (request) => {
+    request.log.debug({}, 'listing all teachers');
     const teachers = await listAll();
+    request.log.info({ count: teachers.length }, 'Teachers listed');
     return teachers;
   });
 
@@ -31,13 +33,17 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     const { names } = request.body;
 
     if (Array.isArray(names)) {
+      request.log.debug({ count: names.length }, 'creating teachers (batch)');
       const toInsert = names.map((name) => ({ name }));
       const insertedTeachers = await TeacherModel.create(toInsert);
+      request.log.info({ count: insertedTeachers.length }, 'Teachers created');
       return insertedTeachers;
     }
 
+    request.log.debug({ names }, 'creating teacher');
     // @ts-ignore - For now, after executing TS with node directly will be fixed
     const insertedTeacher = await TeacherModel.create({ names });
+    request.log.info({ teacherId: insertedTeacher._id }, 'Teacher created');
     return insertedTeacher;
   });
 
@@ -52,12 +58,15 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
         return reply.badRequest('Missing teacherId');
       }
 
+      request.log.debug({ teacherId, alias }, 'updating teacher');
       const updatedTeacher = await findAndUpdate(teacherId, alias);
 
       if (!updatedTeacher) {
+        request.log.warn({ teacherId }, 'Teacher not found for update');
         return reply.badRequest('Teacher not found');
       }
 
+      request.log.info({ teacherId }, 'Teacher updated');
       return updatedTeacher;
     }
   );
@@ -65,7 +74,9 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
   app.get('/search', { schema: searchTeacherSchema }, async (request) => {
     const { q } = request.query;
 
+    request.log.debug({ q }, 'searching teachers');
     const [searchResults] = await searchMany(q);
+    request.log.info({ q, count: searchResults?.length ?? 0 }, 'Teacher search completed');
 
     return searchResults;
   });
@@ -77,12 +88,17 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       return reply.badRequest('Missing SubjectId');
     }
 
+    request.log.debug({ teacherId }, 'fetching teacher reviews');
+
     const cacheKey = `reviews:${teacherId.toString()}`;
     const cached = teachersCache.get(cacheKey);
 
     if (cached) {
+      request.log.debug({ teacherId }, 'Teacher reviews cache hit');
       return cached;
     }
+
+    request.log.debug({ teacherId }, 'Teacher reviews cache miss, querying DB');
 
     const validTeacherId = new Types.ObjectId(teacherId);
     const stats = await rawReviews(validTeacherId);
@@ -117,6 +133,7 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
 
     teachersCache.set(cacheKey, resp);
 
+    request.log.info({ teacherId, subjectCount: populatedSubject.length }, 'Teacher reviews fetched');
     return resp;
   });
 };

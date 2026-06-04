@@ -39,12 +39,19 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
 
   app.get('/', async (request, reply) => {
     // @ts-ignore
+    const season = request.query.season ?? currentQuad();
+    // @ts-ignore
     const cacheKey = `list:components:${request.query.season}`;
+
+    request.log.debug({ season }, 'listing components');
 
     const cachedResponse = componentsListCache.get(cacheKey);
     if (cachedResponse) {
+      request.log.debug({ season }, 'Components list cache hit');
       return cachedResponse;
     }
+
+    request.log.debug({ season }, 'Components list cache miss, querying DB');
 
     const components = await ComponentModel.find(
       {
@@ -90,6 +97,7 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
 
     // componentsListCache.set(cacheKey, nonPaginatedComponents);
 
+    request.log.info({ season, count: nonPaginatedComponents.length }, 'Components listed');
     return nonPaginatedComponents;
   });
 
@@ -97,12 +105,18 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     '/:componentId/kicks',
     { preHandler: [validateStudent], schema: listKickedSchema },
     async (request, reply) => {
+      const { componentId } = request.params;
+      const { season } = request.query;
+
+      request.log.debug({ componentId, season }, 'fetching component kicks');
+
       const component = await ComponentModel.findOne({
-        season: request.query.season,
-        disciplina_id: request.params.componentId,
+        season,
+        disciplina_id: componentId,
       }).lean();
 
       if (!component) {
+        request.log.warn({ componentId, season }, 'Component not found for kicks');
         return reply.badRequest('Component not found');
       }
 
@@ -217,6 +231,10 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
         ).values()
       );
 
+      request.log.info(
+        { componentId, season, studentCount: uniqueStudents.length, isAfterKick },
+        'Component kicks fetched',
+      );
       return uniqueStudents;
     }
   );
@@ -227,7 +245,11 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     async (request, reply) => {
       const { season, subject } = request.query;
 
+      request.log.debug({ season, subject }, 'listing teacher components');
+
       const components = await findTeachers(subject, season);
+
+      request.log.info({ season, subject, count: components.length }, 'Teacher components listed');
 
       return components.map((c) => ({
         teoria: c.teoria?.name,

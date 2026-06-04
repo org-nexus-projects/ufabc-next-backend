@@ -64,6 +64,8 @@ export const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
           {
             email: user.email,
             _id: user._id,
+            ra: user.ra,
+            confirmed: user.confirmed,
           },
           'user logged successfully'
         );
@@ -175,7 +177,9 @@ async function createOrLogin(
     }
 
     // If no user found, create a new one
+    let isNewUser = false;
     if (!user) {
+      isNewUser = true;
       const ttlHours = 1;
       const userExpireTime = Date.now() + ttlHours * 60 * 60 * 1000;
       const expiresAt = new Date(userExpireTime);
@@ -205,8 +209,9 @@ async function createOrLogin(
       });
     }
 
-    // Log user information
-    logger.info({ user: user.toJSON(), msg: 'User before save' });
+    if (isNewUser) {
+      logger.info({ email: oauthUser?.email }, 'User created');
+    }
 
     // Save the user
     await user.save();
