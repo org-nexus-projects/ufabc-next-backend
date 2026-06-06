@@ -1,4 +1,3 @@
-import { currentQuad } from '@next/common';
 import { defineJob } from '@next/queues/client';
 
 import { CommunicationsConnector } from '@/connectors/communications.js';
@@ -37,7 +36,7 @@ function randomDelayMs(): number {
 export const wppGroupsCheckJob = defineJob(JOB_NAMES.WPP_GROUPS_CHECK).handler(
   async ({ app, manager }) => {
     const startedAt = Date.now();
-    const season = currentQuad();
+    const season = '2026:2'; //TODO: add as currentQuad() when it is working properly
     const communicationsConnector = new CommunicationsConnector();
 
     const components = (await ComponentModel.find(
@@ -119,6 +118,4 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WPP_GROUPS_CHECK).handler(
       duration_ms,
     };
   }
-);
-
-export { WPP_SINGLETON_JOB_ID };
+).every('every week on Monday at 3am')
