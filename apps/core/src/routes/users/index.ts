@@ -1,6 +1,5 @@
-import type { FastifyPluginAsyncZodOpenApi } from 'fastify-zod-openapi';
-
 import { currentQuad } from '@next/common';
+import type { FastifyPluginAsyncZodOpenApi } from 'fastify-zod-openapi';
 
 import { UfabcParserConnector } from '@/connectors/ufabc-parser.js';
 import { UfabcParserError } from '@/errors/ufabc-parser.js';
@@ -141,18 +140,41 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
         const hasUfabcContract = await ufabcParserConnector.getTeacher(
           student.login
         );
+
         if (hasUfabcContract) {
           return reply.forbidden('O aluno não pode ter contrato com a UFABC.');
         }
-        const emailFromStudent = student.email.find((e) =>
-          e.includes('@aluno.ufabc.edu.br')
-        );
-        if (emailFromStudent !== email) {
-          return reply.forbidden(
-            'O email fornecido não corresponde ao email do aluno.'
+
+        if (!Array.isArray(student.email)) {
+          request.log.error({
+            msg: 'student.email is not an array',
+            ra,
+            studentEmail: student.email,
+          });
+          return reply.internalServerError(
+            'Dados do aluno inválidos. Tente novamente mais tarde.'
           );
         }
+
+        const normalizedEmail = email.toLowerCase();
+        const emailMatch = student.email.find(
+          (e) => e.toLowerCase() === normalizedEmail
+        );
+        if (!emailMatch) {
+          return reply.badRequest(
+            'O email informado não corresponde ao email institucional vinculado ao RA.'
+          );
+        }
+
+        if (student.email.length > 1) {
+          request.log.warn({
+            msg: 'User has multiple emails due to employment contract with UFABC or post graduation',
+            ra,
+            emails: student.email,
+          });
+        }
       } catch (error: unknown) {
+        request.log.error({ msg: 'error validating student', error });
         if (error instanceof UfabcParserError) {
           if (error.code === 'UFP0015') {
             return reply.badRequest('O RA digitado não existe.');
@@ -281,11 +303,24 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       try {
         const student = await ufabcParserConnector.getStudent(ra);
         await ufabcParserConnector.getTeacher(student.login);
-        const email = student.email.find((e) =>
-          e.includes('@aluno.ufabc.edu.br')
-        );
+
+        if (!Array.isArray(student.email)) {
+          request.log.error({
+            msg: 'student.email is not an array',
+            ra,
+            studentEmail: student.email,
+          });
+          return reply.internalServerError(
+            'Dados do aluno inválidos. Tente novamente mais tarde.'
+          );
+        }
+
+        const email =
+          student.email.find((e) => e.endsWith('@aluno.ufabc.edu.br')) ??
+          student.email.find((e) => e.endsWith('@ufabc.edu.br'));
         return reply.send({ email: email! });
       } catch (error) {
+        request.log.error({ msg: 'error checking email', error });
         if (error instanceof UfabcParserError) {
           if (error.code === 'UFP0015') {
             return reply.badRequest(

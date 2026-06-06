@@ -31,6 +31,7 @@ const configSchema = z.object({
   AWS_REGION: z.string(),
   AWS_ACCESS_KEY_ID: z.string(),
   NEXT_AGENT_URL: z.string(),
+  COMMUNICATIONS_API_URL: z.string(),
   SERVICE_HEADER: z.string().optional(),
   AWS_SECRET_ACCESS_KEY: z.string(),
   USE_LOCALSTACK: z.coerce.boolean().default(true),
@@ -50,6 +51,7 @@ const configSchema = z.object({
   UFABC_PARSER_REQUESTER_KEY: z.string(),
   WEBHOOK_API_KEY: z.string().default('webhook-api-key'),
   UFABC_PARSER_WEBHOOK_SECRET: z.string().optional(),
+  WHATSAPP_AUTH_SECRET: z.string().optional(),
 });
 
 const schema = zodToJsonSchema(configSchema);
