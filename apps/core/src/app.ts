@@ -12,8 +12,6 @@ import type { Mongoose } from 'mongoose';
 
 import { authenticationController } from './controllers/authentication-controller.js';
 import backofficeController from './controllers/backoffice-controller.js';
-import { JOB_NAMES } from './constants.js';
-import { WPP_SINGLETON_JOB_ID } from './jobs/wpp-groups-check.js';
 import componentsController from './controllers/components-controller.js';
 import { proxyController } from './controllers/proxy-controller.js';
 import studentsController from './controllers/students-controller.js';
