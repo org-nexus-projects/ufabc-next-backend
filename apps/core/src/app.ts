@@ -11,6 +11,8 @@ import {
 import { join } from 'node:path';
 
 import backofficeController from './controllers/backoffice-controller.js';
+import { JOB_NAMES } from './constants.js';
+import { WPP_SINGLETON_JOB_ID } from './jobs/wpp-groups-check.js';
 import componentsController from './controllers/components-controller.js';
 import studentsController from './controllers/students-controller.js';
 import { UfabcParserIncomingWebhookController } from './controllers/ufabc-parser-webhook-controller.js';
@@ -172,6 +174,9 @@ export async function buildApp(
 
   await app.manager.start();
   await app.manager.board({ authenticate: authenticateBoard });
+
+  const wppQueue = app.manager.getQueue(JOB_NAMES.WPP_GROUPS_CHECK);
+  await wppQueue?.add(JOB_NAMES.WPP_GROUPS_CHECK, {}, { jobId: WPP_SINGLETON_JOB_ID });
 
   app.worker.setup();
   await app.job.setup();
