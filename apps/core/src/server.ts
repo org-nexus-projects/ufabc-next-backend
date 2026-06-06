@@ -32,7 +32,8 @@ export async function start() {
     }
 
     app.log.warn(signal, 'Gracefully exiting app');
-
+    
+    await app.mongoose.disconnect()
     await app.close();
   });
 

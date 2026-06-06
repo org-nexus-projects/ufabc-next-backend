@@ -24,7 +24,7 @@ import testUtilsPlugin from './plugins/v2/test-utils.js';
 declare module 'fastify' {
   interface FastifyInstance {
     db: DatabaseModels;
-    rawMongoose: Mongoose;
+    mongoose: Mongoose;
   }
 }
 

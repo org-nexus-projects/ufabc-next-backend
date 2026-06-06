@@ -8,7 +8,7 @@ import { db, type DatabaseModels } from './models.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    rawMongoose: Mongoose;
+    mongoose: Mongoose;
     db: DatabaseModels;
   }
 }
@@ -60,7 +60,7 @@ export default fp(
         autoIndex: app.config.NODE_ENV === 'dev',
       });
 
-      app.decorate('rawMongoose', mongoose);
+      app.decorate('mongoose', mongoose);
       app.decorate('db', db);
 
       app.addHook('onClose', async (instance) => {
