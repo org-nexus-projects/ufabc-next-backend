@@ -54,17 +54,10 @@ export async function syncStudentFromSigaa(
         $or: [{ oldRa: currentRaString }, { newRa: currentRaString }],
       }).sort({ createdAt: -1 });
 
-      if (!lastRaChange) {
-        return {
-          status: 'conflict',
-          message:
-            'Este RA já está vinculado a outro usuário, mas não há histórico suficiente para validar a reatribuição automática.',
-        } as const;
-      }
-
       const RECENT_RA_CHANGE_WINDOW_DAYS = 30;
 
       const isRecentChange =
+        lastRaChange !== null &&
         Date.now() - lastRaChange.createdAt.getTime() <
         RECENT_RA_CHANGE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
