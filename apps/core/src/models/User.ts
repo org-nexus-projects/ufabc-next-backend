@@ -91,7 +91,7 @@ const userSchema = new Schema(
 const userRaHistorySchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'users', required: true },
-    oldRa: { type: String, required: true },
+    oldRa: { type: String, required: false, default: null },
     newRa: { type: String, required: false, default: null },
   },
   { timestamps: true }

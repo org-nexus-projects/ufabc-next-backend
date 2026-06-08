@@ -31,6 +31,15 @@ export async function syncStudentFromSigaa(
     } as const;
   }
 
+  const existingHistory = await UserRaHistoryModel.findOne({ userId: user._id });
+  if (!existingHistory) {
+    await UserRaHistoryModel.create({
+      userId: user._id,
+      oldRa: null,
+      newRa: user.ra !== null && user.ra !== undefined ? String(user.ra) : null,
+    });
+  }
+
   const userRaString = user.ra !== null && user.ra !== undefined ? String(user.ra) : null;
 
   if (userRaString !== currentRaString) {
