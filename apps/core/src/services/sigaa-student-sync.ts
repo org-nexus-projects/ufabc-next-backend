@@ -95,7 +95,7 @@ export async function syncStudentFromSigaa(
 
   const cached = await app.redis.get(cacheKey);
   if (cached) {
-    return { status: 'cached' } as const;
+    return { status: 'cached', cacheKey } as const;
   }
 
   let studentSync = await app.db.StudentSync.findOne({ ra: currentRaString });

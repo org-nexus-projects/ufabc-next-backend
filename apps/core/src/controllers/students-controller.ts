@@ -133,8 +133,6 @@ export const studentsController: FastifyPluginAsyncZod = async (app) => {
       const { ra, login } = request.body;
       const { sessionId, viewId } = request.sigaaSession;
 
-      const cacheKey = `http:students:sigaa:${ra}`;
-
       const result = await syncStudentFromSigaa(
         app,
         { ra, login },
@@ -151,7 +149,7 @@ export const studentsController: FastifyPluginAsyncZod = async (app) => {
       }
 
       if (result.status === 'cached') {
-        app.log.debug({ cacheKey }, 'Student already synced');
+        app.log.debug({ cacheKey: result.cacheKey }, 'Student already synced');
         return reply.status(202).send({ status: 'cached' });
       }
 
