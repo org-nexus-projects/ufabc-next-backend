@@ -235,7 +235,12 @@ describe('studentsController - POST /students/sigaa', () => {
       email: 'aluno@aluno.ufabc.edu.br',
     });
 
-    expect(mocks.userRaHistoryCreate).not.toHaveBeenCalled();
+    // histórico inicial é criado na primeira sincronização
+    expect(mocks.userRaHistoryCreate).toHaveBeenCalledWith({
+      userId: 'user-id-1',
+      oldRa: null,
+      newRa: '123456',
+    });
 
     expect(user.ra).toBe(123456);
     expect(user.save).not.toHaveBeenCalled();
