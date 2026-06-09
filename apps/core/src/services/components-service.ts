@@ -25,18 +25,13 @@ export class ComponentsService {
     globalTraceId?: string,
     enrolledCodigos?: string[],
   ) {
-    const result = await this.engine.fetchAndValidateCourses(session);
-    if (result.error) {
-      return { error: result.error };
-    }
+    const data = await this.engine.fetchAndValidateCourses(session);
 
     await this.manager.dispatch(JOB_NAMES.COMPONENTS_ARCHIVES_PROCESSING, {
-      component: result.data!,
+      component: data,
       globalTraceId,
       session,
       enrolledCodigos,
     });
-
-    return { error: null };
   }
 }

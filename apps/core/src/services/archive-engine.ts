@@ -3,6 +3,7 @@ import { ofetch } from 'ofetch';
 
 import { MoodleConnector } from '@/connectors/moodle.js';
 import { S3Connector } from '@/connectors/s3-connector.js';
+import { ArchiveParseFailed } from '@/errors/custom-errors.js';
 import { ComponentModel } from '@/models/Component.js';
 import { findTeacher } from '@/models/Teacher.js';
 
@@ -326,10 +327,10 @@ export class ArchiveEngine {
         { error: parsed.error.message },
         'Failed to parse component archives',
       );
-      return { error: parsed.error.message };
+      throw new ArchiveParseFailed(parsed.error.message);
     }
 
-    return { error: null, data: parsed.data! };
+    return parsed.data!;
   }
 
   async extractTeacherNames(courseId: number) {
