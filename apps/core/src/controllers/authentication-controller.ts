@@ -1,6 +1,5 @@
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 
-import { currentQuad } from '@next/common';
 import { createDecipheriv, createHash } from 'node:crypto';
 import { z } from 'zod';
 
@@ -100,7 +99,7 @@ export const authenticationController: FastifyPluginAsyncZod = async (app) => {
         return reply.unauthorized('RA mismatch');
       }
 
-      const season = currentQuad();
+      const season = '2026:2';
       const componentDoc = await ComponentModel.findOne({
         uf_cod_turma: component,
         season,
