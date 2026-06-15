@@ -17,18 +17,39 @@ export const proxyController: FastifyPluginAsyncZod = async (app) => {
       }),
       response: {
         202: z.object({ message: z.string() }),
+        429: z.object({ message: z.string() }),
         502: z.object({ message: z.string() }),
       },
     },
     preHandler: [permissionVerifyHook(ALLOWED_ANNOUNCEMENT_PERMISSIONS)],
     handler: async (request, reply) => {
-      const communications = new CommunicationsConnector(
-        app.config.COMMUNICATIONS_API_URL,
-        request.id
-      );
-      const response = await communications.sendAnnouncement(request.body);
+      const lockKey = `announcement:${request.user._id}`;
+      const hasLock = await request.acquireLock(lockKey, '24h');
 
-      return reply.status(202).send(response);
+      if (!hasLock) {
+        return reply.tooManyRequests(
+          'You can only send one announcement per day'
+        );
+      }
+
+      try {
+        const communications = new CommunicationsConnector(
+          app.config.COMMUNICATIONS_API_URL,
+          request.id
+        );
+        const response = await communications.sendAnnouncement(request.body);
+
+        return reply.status(202).send(response);
+      } catch (error) {
+        await request.releaseLock(lockKey);
+        request.log.error(
+          { error, userId: request.user._id },
+          'Failed to send announcement'
+        );
+        return reply
+          .status(502)
+          .send({ message: 'Failed to send announcement' });
+      }
     },
   });
 };
