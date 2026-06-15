@@ -27,9 +27,9 @@ export const proxyController: FastifyPluginAsyncZod = async (app) => {
       const hasLock = await request.acquireLock(lockKey, '24h');
 
       if (!hasLock) {
-        return reply.tooManyRequests(
-          'You can only send one announcement per day'
-        );
+        return reply.status(429).send({
+          message: 'You can only send one announcement per day',
+        });
       }
 
       try {
