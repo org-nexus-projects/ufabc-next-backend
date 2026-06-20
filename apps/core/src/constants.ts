@@ -29,7 +29,7 @@ export const JOB_NAMES = {
   UFABC_PARSER_WEBHOOK_PROCESSING: 'ufabc_parser_webhook_processing',
   STUDENT_SYNC_PROCESSING: 'student_sync_processing',
   TEACHER_CREATED: 'teacher_created',
-  WPP_GROUPS_CHECK: 'wpp_groups_check',
+  WHATSAPP_GROUPS_CHECK: 'whatsapp_groups_check',
   PROCESS_SETTLED_ENROLLMENTS: 'process_settled_enrollments',
 } as const;
 
