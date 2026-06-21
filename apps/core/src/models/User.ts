@@ -10,7 +10,7 @@ const userSchema = new Schema(
     ra: {
       type: Number,
       unique: true,
-      partialFilterExpression: { ra: { $exists: true } },
+      sparse: true,
     },
     email: {
       type: String,
@@ -21,7 +21,7 @@ const userSchema = new Schema(
           `${props.value} não é um e-mail válido.`,
       },
       unique: true,
-      partialFilterExpression: { email: { $exists: true } },
+      sparse: true
     },
     confirmed: {
       type: Boolean,
