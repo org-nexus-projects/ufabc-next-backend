@@ -23,6 +23,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     async (request, reply) => {
       const { season } = request.query;
 
+      request.log.debug({ season }, 'fetching students stats by component');
+
       const isPrevious = await ComponentModel.countDocuments({
         season,
         before_kick: { $exists: true, $ne: [] },
@@ -31,28 +33,40 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       const dataKey = isPrevious ? '$before_kick' : '$alunos_matriculados';
       const statusAggregate = await getComponentsStudentsStats(season, dataKey);
 
+      request.log.info(
+        { season, dataKey, resultCount: statusAggregate.length },
+        'Students stats fetched',
+      );
+
       return statusAggregate;
     }
   );
 
-  app.get('/courses', async () => {
+  app.get('/courses', async (request) => {
+    request.log.debug({}, 'listing all student courses');
     const allStudentsCourses = await getAllCourses();
+    request.log.info({ count: allStudentsCourses.length }, 'Student courses listed');
     return allStudentsCourses;
   });
 
-  app.get('/', { schema: listStudentSchema }, async ({ headers }, reply) => {
-    const login = headers['uf-login'];
-    const ra = Number(headers.ra as string);
+  app.get('/', { schema: listStudentSchema }, async (request, reply) => {
+    const login = request.headers['uf-login'];
+    const ra = Number(request.headers.ra as string);
 
     if (!login || !ra) {
       return reply.badRequest('Missing required params');
     }
 
+    request.log.debug({ ra, login }, 'fetching student');
+
     const student = await getStudent({ ra, login });
 
     if (!student) {
+      request.log.warn({ ra, login }, 'Student not found');
       return reply.notFound('Student not found');
     }
+
+    request.log.info({ ra, studentId: student.aluno_id }, 'Student fetched');
 
     return {
       studentId: student.aluno_id,
@@ -80,11 +94,16 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
         return reply.badRequest('Missing required params');
       }
 
+      request.log.debug({ login }, 'fetching matricula student');
+
       const student = await getStudent({ login });
 
       if (!student) {
+        request.log.warn({ login }, 'Student not found for matricula');
         return reply.notFound('Student not found');
       }
+
+      request.log.info({ login, studentId: student.aluno_id }, 'Matricula student fetched');
 
       const matriculaStudent = {
         studentId: student.aluno_id,
@@ -107,6 +126,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
   app.put('/', { schema: updateStudentSchema }, async (request, reply) => {
     const { login, ra, studentId, graduationId } = request.body;
 
+    request.log.debug({ login, ra, studentId, graduationId }, 'updating student');
+
     const updatedStudent = await update({
       login,
       ra,
@@ -115,8 +136,11 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     });
 
     if (!updatedStudent) {
+      request.log.warn({ login, ra, studentId }, 'Student not found for update');
       return reply.notFound('Could not find student');
     }
+
+    request.log.info({ login, ra: updatedStudent.ra, studentId }, 'Student updated');
 
     return updatedStudent;
   });

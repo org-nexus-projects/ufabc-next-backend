@@ -16,6 +16,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
   app.get('/', { schema: listSubjectsSchema }, async (request, reply) => {
     const { limit, page } = request.query;
 
+    request.log.debug({ limit, page }, 'listing subjects');
+
     const [total, subjects] = await Promise.all([
       SubjectModel.countDocuments(),
       SubjectModel.find()
@@ -30,6 +32,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       name: s.name,
     }));
 
+    request.log.info({ total, pages, returned: results.length, page, limit }, 'Subjects listed');
+
     return {
       total,
       pages,
@@ -39,6 +43,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
 
   app.get('/search', { schema: searchSubjectSchema }, async (request) => {
     const { q } = request.query;
+
+    request.log.debug({ q }, 'searching subjects');
 
     const [searchResults] = await SubjectModel.aggregate<{
       total: number;
@@ -71,6 +77,11 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       },
     ]);
 
+    request.log.info(
+      { q, total: searchResults?.total ?? 0, returned: searchResults?.data?.length ?? 0 },
+      'Subject search completed',
+    );
+
     return searchResults;
   });
 
@@ -81,12 +92,17 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       return reply.badRequest('Missing SubjectId');
     }
 
+    request.log.debug({ subjectId }, 'fetching subject reviews');
+
     const cacheKey = `reviews:${subjectId.toString()}`;
     const cached = subjectsCache.get(cacheKey);
 
     if (cached) {
+      request.log.debug({ subjectId }, 'Subject reviews cache hit');
       return cached;
     }
+
+    request.log.debug({ subjectId }, 'Subject reviews cache miss, querying DB');
 
     const validSubjectId = new Types.ObjectId(subjectId);
     const stats = await rawSubjectsReviews(validSubjectId);
@@ -114,6 +130,11 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     const subject = await SubjectModel.findOne({
       _id: validSubjectId,
     }).lean();
+
+    if (!subject) {
+      request.log.warn({ subjectId }, 'Subject not found for reviews');
+    }
+
     const teacher = await TeacherModel.populate(stats, 'teacher');
     const resp = {
       subject: subject as NonNullable<Subject>,
@@ -125,6 +146,8 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
     };
 
     subjectsCache.set(cacheKey, resp);
+
+    request.log.info({ subjectId, teacherCount: stats.length }, 'Subject reviews fetched');
 
     return resp;
   });

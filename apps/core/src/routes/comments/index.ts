@@ -98,6 +98,15 @@ const plugin: FastifyPluginAsyncZodOpenApi = async (app) => {
       ra: enrollment.ra.toString(),
     });
 
+    request.log.info(
+      {
+        ra: request.user.ra,
+        comment,
+        commentId: createdComment._id,
+      },
+      'Comment created',
+    );
+
     return createdComment;
   });
 
