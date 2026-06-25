@@ -8,9 +8,8 @@ import { db, type DatabaseModels } from './models.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
-    rawMongoose: Mongoose;
+    mongoose: Mongoose;
     db: DatabaseModels;
-    config: any;
   }
 }
 
@@ -30,6 +29,7 @@ export default fp(
       });
 
       const isLogDebug =
+        // @ts-ignore
         app.config.NODE_ENV === 'dev' && app.config.LOG_LEVEL === 'debug';
 
       if (isLogDebug) {
@@ -51,14 +51,16 @@ export default fp(
         });
       }
 
+      // @ts-ignore
       await connect(app.config.MONGODB_CONNECTION_URL, {
         maxPoolSize: 10,
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
+        // @ts-ignore
         autoIndex: app.config.NODE_ENV === 'dev',
       });
 
-      app.decorate('rawMongoose', mongoose);
+      app.decorate('mongoose', mongoose);
       app.decorate('db', db);
 
       app.addHook('onClose', async (instance) => {

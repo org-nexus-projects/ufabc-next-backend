@@ -1,19 +1,23 @@
+import { load } from 'cheerio';
+import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 
 import { currentQuad } from '@next/common';
-import { z } from 'zod';
 
 import { MoodleConnector } from '@/connectors/moodle.js';
-import { JOB_NAMES } from '@/constants.js';
+import { EmailVerificationFailed, UserWithoutRA } from '@/errors/custom-errors.js';
 import { jwtVerifyHook } from '@/hooks/jwt-verify.js';
 import { moodleSession } from '@/hooks/moodle-session.js';
+import { ComponentArchiveModel } from '@/models/ComponentArchive.js';
 import { ComponentModel } from '@/models/Component.js';
+
+import { UserModel } from '@/models/User.js';
 import {
-  ListComponent,
   listComponentsSchema,
-  PopulatedComponent,
+  type ListComponent,
+  type PopulatedComponent,
 } from '@/schemas/v2/components.js';
-import { getComponentArchives } from '@/services/components-service.js';
+import { ComponentsService } from '@/services/components-service.js';
 
 const moodleConnector = new MoodleConnector();
 
@@ -22,11 +26,16 @@ const componentsController: FastifyPluginAsyncZod = async (app) => {
     method: 'POST',
     url: '/components/archives',
     preHandler: [moodleSession],
+    onError: async (request) => {
+      const session = request.requestContext.get('moodleSession');
+      if (session) {
+        await request.releaseLock(session.sessionId);
+      }
+    },
     schema: {
       response: {
-        202: z.object({
-          status: z.string(),
-        }),
+        200: z.any(),
+        202: z.any(),
       },
       headers: z.object({
         'session-id': z.string(),
@@ -36,8 +45,9 @@ const componentsController: FastifyPluginAsyncZod = async (app) => {
     handler: async (request, reply) => {
       const session = request.requestContext.get('moodleSession')!;
       const hasLock = await request.acquireLock(session.sessionId, '24h');
+      const isDevelopment = app.config.NODE_ENV !== 'prod'
 
-      if (!hasLock) {
+      if (!hasLock && !isDevelopment) {
         request.log.debug(
           { sessionId: session.sessionId },
           'Archives already processing'
@@ -45,32 +55,32 @@ const componentsController: FastifyPluginAsyncZod = async (app) => {
         return reply.status(202).send({ status: 'success' });
       }
 
-      try {
-        const courses = await moodleConnector.getComponents(
-          session.sessionId,
-          session.sessKey
-        );
+      const moodleConnector = new MoodleConnector(request.id);
+      const userPage = await moodleConnector.getUserPage(session.sessionId);
+      const $ = load(userPage);
+      const email = $('#region-main > div > div > div.userprofile > div > section:nth-child(1) > div > ul > li:nth-child(2) > dl > dd > a').text();
 
-        const componentArchives = await getComponentArchives(courses[0]);
-        if (componentArchives.error || !componentArchives.data) {
-          await request.releaseLock(session.sessionId);
-          return reply.badRequest(componentArchives.error ?? 'No data');
-        }
-
-        await app.manager.dispatch(JOB_NAMES.COMPONENTS_ARCHIVES_PROCESSING, {
-          component: componentArchives.data,
-          globalTraceId: request.id,
-          session,
-        });
-
-        return reply.status(202).send({
-          status: 'success',
-        });
-      } catch (error) {
-        request.log.error(error, 'Error getting archives');
-        await request.releaseLock(session.sessionId);
-        return reply.internalServerError('Error getting archives');
+      if (!email) {
+        throw new EmailVerificationFailed();
       }
+
+      
+      const user = await UserModel.findOne({ email });
+
+      if (!user?.ra) {
+        request.log.warn({ email }, 'User does not have RA, skipping enrollment check');
+        throw new UserWithoutRA();
+      }
+
+      const componentsService = new ComponentsService({
+        manager: app.manager,
+        globalTraceId: request.id,
+      });
+      await componentsService.processComponentArchives(session);
+
+      return reply.status(202).send({
+        status: 'success',
+      });
     },
   });
 
@@ -264,6 +274,98 @@ const componentsController: FastifyPluginAsyncZod = async (app) => {
       );
 
       return reply.status(200).send(mappedComponents);
+    },
+  });
+
+  app.route({
+    method: 'GET',
+    url: '/components/:componentId/archives',
+    schema: {
+      params: z.object({
+        componentId: z.string(),
+      }),
+      response: {
+        200: z.object({
+          status: z.string(),
+          data: z.array(z.any()),
+        }),
+      },
+    },
+    handler: async (request, reply) => {
+      const { componentId } = request.params;
+
+      const archives = await ComponentArchiveModel.find({
+        component: componentId,
+      })
+        .populate('component', 'disciplina codigo turma turno season')
+        .sort({ createdAt: -1 })
+        .lean();
+
+      const data = archives.map((archive: any) => ({
+        _id: archive._id.toString(),
+        s3_key: archive.s3_key ?? null,
+        original_url: archive.original_url,
+        file_name: archive.file_name ?? null,
+        status: archive.status,
+        source: archive.source,
+        timeline: (archive.timeline ?? []).map((event: any) => ({
+          status: event.status,
+          timestamp: event.timestamp?.toISOString() ?? '',
+          metadata: event.metadata,
+        })),
+        createdAt: archive.createdAt?.toISOString() ?? '',
+        component: archive.component ?? null,
+      }));
+
+      return reply.status(200).send({ status: 'success', data });
+    },
+  });
+
+  app.route({
+    method: 'GET',
+    url: '/components/:componentId/archives/:archiveId/download',
+    schema: {
+      params: z.object({
+        componentId: z.string(),
+        archiveId: z.string(),
+      }),
+      response: {
+        200: z.any(),
+        404: z.object({ status: z.string(), message: z.string() }),
+        500: z.object({ status: z.string(), message: z.string() }),
+      },
+    },
+    handler: async (request, reply) => {
+      const { archiveId } = request.params;
+
+      const archive = await ComponentArchiveModel.findById(archiveId);
+      if (!archive || !archive.s3_key) {
+        return reply.code(404).send({
+          status: 'error',
+          message: 'Archive not found or not yet stored',
+        });
+      }
+
+      const s3Object = await app.aws.s3.getObject(
+        app.config.AWS_BUCKET,
+        archive.s3_key,
+      );
+
+      const filename = archive.file_name ?? 'document.pdf';
+      const contentType =
+        s3Object.ContentType ?? 'application/octet-stream';
+
+      if (!s3Object.Body) {
+        return reply.code(500).send({
+          status: 'error',
+          message: 'Empty file on S3',
+        });
+      }
+
+      return reply
+        .type(contentType)
+        .header('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(s3Object.Body);
     },
   });
 };
