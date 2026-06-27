@@ -14,8 +14,8 @@ type SendAnnouncementResponse = {
 
 export class CommunicationsConnector extends BaseRequester {
 
-  constructor(globalTraceId?: string) {
-    super(process.env.COMMUNICATIONS_URL, globalTraceId);
+  constructor(baseURL?: string, globalTraceId?: string) {
+    super(baseURL ?? process.env.COMMUNICATIONS_URL, globalTraceId);
   }
 
   async sendLinkToValidate(
