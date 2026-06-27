@@ -97,7 +97,7 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
     const durationMs = Date.now() - startedAt;
 
     app.log.info({
-      event: 'WHATSAPP_groups_check_completed',
+      event: 'whatsapp_groups_check_completed',
       season,
       total: components.length,
       ...counts,
@@ -118,4 +118,4 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
       durationMs,
     };
   }
-).every('every week on Monday at 3am')
+).every('every day at 6pm')
