@@ -27,7 +27,7 @@ export const jobRegistry = {
   [JOB_NAMES.UFABC_PARSER_WEBHOOK_PROCESSING]: ufabcParserWebhookProcessingJob,
   [JOB_NAMES.STUDENT_SYNC_PROCESSING]: studentSyncProcessingJob,
   [JOB_NAMES.TEACHER_CREATED]: teacherCreatedJob,
-  [JOB_NAMES.WPP_GROUPS_CHECK]: wppGroupsCheckJob,
+  [JOB_NAMES.WHATSAPP_GROUPS_CHECK]: wppGroupsCheckJob,
   [JOB_NAMES.PROCESS_SETTLED_ENROLLMENTS]: settledEnrollmentsProcessingJob,
 } as const;
 

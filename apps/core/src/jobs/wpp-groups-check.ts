@@ -4,9 +4,9 @@ import { CommunicationsConnector } from '@/connectors/communications.js';
 import { JOB_NAMES } from '@/constants.js';
 import { ComponentModel } from '@/models/Component.js';
 
-const WPP_SINGLETON_JOB_ID = 'wpp-groups-check-singleton';
+const WHATSAPP_SINGLETON_JOB_ID = 'wpp-groups-check-singleton';
 
-const WPP_HEADERS = {
+const WHATSAPP_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   Cookie: 'wa_lang_pref=en; wa_ul=40102065-f4c6-4a5a-9cfa-4d6d63c14bc5',
@@ -18,7 +18,7 @@ async function validateGroupUrl(
   url: string
 ): Promise<'valid' | 'invalid' | 'error'> {
   try {
-    const response = await fetch(url, { headers: WPP_HEADERS });
+    const response = await fetch(url, { headers: WHATSAPP_HEADERS });
     const html = await response.text();
     const title = OG_TITLE_RE.exec(html)?.[1] ?? '';
     return title.length > 0 ? 'valid' : 'invalid';
@@ -33,7 +33,7 @@ function randomDelayMs(): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export const wppGroupsCheckJob = defineJob(JOB_NAMES.WPP_GROUPS_CHECK).handler(
+export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).handler(
   async ({ app, manager }) => {
     const startedAt = Date.now();
     const season = '2026:2'; //TODO: add as currentQuad() when it is working properly
@@ -66,7 +66,7 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WPP_GROUPS_CHECK).handler(
       const result = await validateGroupUrl(groupURL!);
 
       app.log.info({
-        event: 'wpp_group_url_checked',
+        event: 'WHATSAPP_group_url_checked',
         groupUrl: groupURL,
         disciplina_id: disciplinaId,
         result,
@@ -97,18 +97,18 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WPP_GROUPS_CHECK).handler(
     const duration_ms = Date.now() - startedAt;
 
     app.log.info({
-      event: 'wpp_groups_check_completed',
+      event: 'WHATSAPP_groups_check_completed',
       season,
       total: components.length,
       ...counts,
       duration_ms,
     });
 
-    const queue = manager.getQueue(JOB_NAMES.WPP_GROUPS_CHECK);
+    const queue = manager.getQueue(JOB_NAMES.WHATSAPP_GROUPS_CHECK);
     await queue?.add(
-      JOB_NAMES.WPP_GROUPS_CHECK,
+      JOB_NAMES.WHATSAPP_GROUPS_CHECK,
       {},
-      { jobId: WPP_SINGLETON_JOB_ID }
+      { jobId: WHATSAPP_SINGLETON_JOB_ID }
     );
 
     return {
