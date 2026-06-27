@@ -4,8 +4,19 @@ type ComponentId = number;
 type StudentIds = number;
 export type UFProcessorEnrolled = Record<ComponentId, StudentIds[]>;
 
+type SendAnnouncementParams = {
+  courseIdentifier: number;
+  season: string;
+  message: string;
+};
+
+type SendAnnouncementResponse = {
+  message: string;
+};
+
 
 export class CommunicationsConnector extends BaseRequester {
+
   constructor(globalTraceId?: string) {
     super(process.env.COMMUNICATIONS_URL, globalTraceId);
   }
@@ -21,20 +32,9 @@ export class CommunicationsConnector extends BaseRequester {
     });
 
     return response;
-type SendAnnouncementParams = {
-  courseIdentifier: number;
-  season: string;
-  message: string;
-};
 
-type SendAnnouncementResponse = {
-  message: string;
-};
-
-export class CommunicationsConnector extends BaseRequester {
-  constructor(baseURL: string, globalTraceId?: string) {
-    super(baseURL, globalTraceId);
   }
+
 
   async sendAnnouncement(
     params: SendAnnouncementParams
@@ -49,5 +49,7 @@ export class CommunicationsConnector extends BaseRequester {
         message,
       },
     });
+
   }
+
 }
