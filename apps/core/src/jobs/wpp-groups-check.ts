@@ -49,9 +49,9 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
     )
       .lean()
       .exec()) as Array<{
-      groupURL?: string | null;
-      disciplina_id?: number | null;
-    }>;
+        groupURL?: string | null;
+        disciplina_id?: number | null;
+      }>;
 
     app.log.info(
       { total: components.length },
@@ -94,14 +94,14 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
       }
     }
 
-    const duration_ms = Date.now() - startedAt;
+    const durationMs = Date.now() - startedAt;
 
     app.log.info({
       event: 'WHATSAPP_groups_check_completed',
       season,
       total: components.length,
       ...counts,
-      duration_ms,
+      durationMs,
     });
 
     const queue = manager.getQueue(JOB_NAMES.WHATSAPP_GROUPS_CHECK);
@@ -115,7 +115,7 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
       success: true,
       total: components.length,
       ...counts,
-      duration_ms,
+      durationMs,
     };
   }
 ).every('every week on Monday at 3am')
