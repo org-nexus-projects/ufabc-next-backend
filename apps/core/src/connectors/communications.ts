@@ -1,8 +1,5 @@
 import { BaseRequester } from './base-requester.js';
 
-type ComponentId = number;
-type StudentIds = number;
-export type UFProcessorEnrolled = Record<ComponentId, StudentIds[]>;
 
 type SendAnnouncementParams = {
   courseIdentifier: number;
