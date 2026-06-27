@@ -10,7 +10,7 @@ import {
   processEnrollmentJob,
 } from './enrolled-students.js';
 import { enrollmentsProcessingJob } from './enrollments-processing.js';
-import { wppGroupsCheckJob } from './wpp-groups-check.js';
+import { whatsappGroupsCheckJob } from './whatsapp-groups-check.js';
 import { settledEnrollmentsProcessingJob } from './settled-enrollments-processing.js';
 import { studentSyncProcessingJob } from './student-sync-processing.js';
 import { teacherCreatedJob } from './teacher-created.js';
