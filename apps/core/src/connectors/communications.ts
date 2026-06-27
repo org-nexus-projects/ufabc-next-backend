@@ -1,5 +1,6 @@
 import { BaseRequester } from './base-requester.js';
 
+
 type SendAnnouncementParams = {
   courseIdentifier: number;
   season: string;
@@ -10,10 +11,27 @@ type SendAnnouncementResponse = {
   message: string;
 };
 
+
 export class CommunicationsConnector extends BaseRequester {
-  constructor(baseURL: string, globalTraceId?: string) {
-    super(baseURL, globalTraceId);
+
+  constructor(baseURL?: string, globalTraceId?: string) {
+    super(baseURL ?? process.env.COMMUNICATIONS_URL, globalTraceId);
   }
+
+  async sendLinkToValidate(
+    link: string,
+    disciplina_id: string
+  ): Promise<unknown> {
+
+    const response = await this.request<unknown>('groups/validate-link', {
+      method: 'POST',
+      body: { link, disciplina_id },
+    });
+
+    return response;
+
+  }
+
 
   async sendAnnouncement(
     params: SendAnnouncementParams
@@ -28,5 +46,7 @@ export class CommunicationsConnector extends BaseRequester {
         message,
       },
     });
+
   }
+
 }
