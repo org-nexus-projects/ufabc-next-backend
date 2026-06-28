@@ -118,4 +118,4 @@ export const wppGroupsCheckJob = defineJob(JOB_NAMES.WHATSAPP_GROUPS_CHECK).hand
       durationMs,
     };
   }
-).every('every 1 day')
+).every('1 day')
